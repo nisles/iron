@@ -363,6 +363,7 @@ CONTAINS
                 !Create the auto created dependent field
                 CALL FIELD_CREATE_START(EQUATIONS_SET_SETUP%FIELD_USER_NUMBER,EQUATIONS_SET%REGION, &
                   & EQUATIONS_SET%DEPENDENT%DEPENDENT_FIELD,err,error,*999)
+                WRITE(*,*) "JARED WITH DARCY FIELD 1"
                 CALL FIELD_TYPE_SET_AND_LOCK(EQUATIONS_SET%DEPENDENT%DEPENDENT_FIELD,FIELD_GEOMETRIC_GENERAL_TYPE,err,error,*999)
                 CALL FIELD_DEPENDENT_TYPE_SET_AND_LOCK(EQUATIONS_SET%DEPENDENT%DEPENDENT_FIELD,FIELD_DEPENDENT_TYPE,err,error,*999)
 
@@ -454,6 +455,7 @@ CONTAINS
                   !-----------------------------------------------------------------------
                   ! Check the shared dependent field set up in finite elasticity routines
                   !-----------------------------------------------------------------------
+                  WRITE(*,*) "JARED WITH DARCY FIELD 2"
                   CALL FIELD_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_GEOMETRIC_GENERAL_TYPE,err,error,*999)
                   CALL FIELD_DEPENDENT_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_DEPENDENT_TYPE,err,error,*999)
                   CALL FIELD_NUMBER_OF_VARIABLES_CHECK(EQUATIONS_SET_SETUP%FIELD,4,err,error,*999)
@@ -526,6 +528,7 @@ CONTAINS
                   ! Check the shared dependent field set up in finite elasticity routines
                   ! Must have 2+2*Ncompartments number of variable types
                   !-----------------------------------------------------------------------
+                  WRITE(*,*) "JARED WITH DARCY FIELD 3"
                   CALL FIELD_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_GEOMETRIC_GENERAL_TYPE,err,error,*999)
                   CALL FIELD_DEPENDENT_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_DEPENDENT_TYPE,err,error,*999)
                   !Get the number of Darcy compartments from the equations set field
@@ -2054,6 +2057,14 @@ CONTAINS
                   DYDXI(component_idx,xi_idx)=REFERENCE_GEOMETRIC_INTERPOLATED_POINT%VALUES(component_idx,derivative_idx) !dy/dxi (y = referential)
                 ENDDO
               ENDDO
+              IF(DEPENDENT_BASIS%NUMBER_OF_XI == 1) THEN
+                DYDXI(:,2) = [0.0_DP,1.0_DP,0.0_DP]
+                DYDXI(:,3) = [0.0_DP,0.0_DP,1.0_DP]
+                DYDXI(2:3,1) = 0.0_DP
+              ELSEIF(DEPENDENT_BASIS%NUMBER_OF_XI == 2) THEN
+                DYDXI(:,3) = [0.0_DP,0.0_DP,1.0_DP]
+                DYDXI(3,1:2) = 0.0_DP
+              ENDIF
 
               !--- Interpolation of (actual) Geometry and Metrics
               CALL FIELD_INTERPOLATION_PARAMETERS_ELEMENT_GET(FIELD_VALUES_SET_TYPE,ELEMENT_NUMBER, &
@@ -2068,14 +2079,21 @@ CONTAINS
                 DO xi_idx=1,DEPENDENT_BASIS%NUMBER_OF_XI
                   derivative_idx=PARTIAL_DERIVATIVE_FIRST_DERIVATIVE_MAP(xi_idx) !2,4,7
                   DXDXI(component_idx,xi_idx)=GEOMETRIC_INTERPOLATED_POINT%VALUES(component_idx,derivative_idx) !dx/dxi
-                ENDDO
+                ENDDO              
               ENDDO
+              IF(DEPENDENT_BASIS%NUMBER_OF_XI == 1) THEN
+                DXDXI(:,2) = [0.0_DP,1.0_DP,0.0_DP]
+                DXDXI(:,3) = [0.0_DP,0.0_DP,1.0_DP]
+                DXDXI(2:3,1) = 0.0_DP
+              ELSEIF(DEPENDENT_BASIS%NUMBER_OF_XI == 2) THEN
+                DXDXI(:,3) = [0.0_DP,0.0_DP,1.0_DP]
+                DXDXI(3,1:2) = 0.0_DP
+              ENDIF
 
               !--- Compute deformation gradient tensor DXDY and its Jacobian Jxy
               CALL Invert(DYDXI,DXIDY,Jyxi,err,error,*999) !dy/dxi -> dxi/dy
               CALL MatrixProduct(DXDXI,DXIDY,DXDY,err,error,*999) !dx/dxi * dxi/dy = dx/dy (deformation gradient tensor, F)
               CALL Determinant(DXDY,Jxy,err,error,*999)
-
               IF( ABS(Jxy) < 1.0E-10_DP ) THEN
                 localError="DARCY_EQUATION_FINITE_ELEMENT_CALCULATE: Jacobian Jxy is smaller than 1.0E-10_DP."
                 CALL FlagError(localError,err,error,*999)

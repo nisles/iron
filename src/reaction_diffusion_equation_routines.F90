@@ -183,6 +183,7 @@ CONTAINS
         CASE(EQUATIONS_SET_SETUP_START_ACTION)
           SELECT CASE(EQUATIONS_SET%SPECIFICATION(3))
           CASE(EQUATIONS_SET_CELLML_REAC_SPLIT_REAC_DIFF_SUBTYPE, &
+           & EQUATIONS_SET_CELLML_REAC_MOVING_DOMAIN_SUBTYPE, &
            & EQUATIONS_SET_CONSTANT_REAC_DIFF_SUBTYPE)
             IF(EQUATIONS_SET%DEPENDENT%DEPENDENT_FIELD_AUTO_CREATED) THEN
               !Create the auto created dependent field
@@ -330,6 +331,11 @@ CONTAINS
                   !plus one for the storage coefficient in alpha(delC/delt) = Div(-kgradC)+cellmlRC
                   NUMBER_OF_MATERIALS_COMPONENTS=NUMBER_OF_DIMENSIONS+1
                   DIMENSION_MULTIPLIER=1
+                ELSEIF(EQUATIONS_SET%SPECIFICATION(3)==EQUATIONS_SET_CELLML_REAC_MOVING_DOMAIN_SUBTYPE) THEN
+                  !Constant reaction + diffusion. Materials field has 1 diffuse coeff for each dimension
+                  !plus one for the storage coefficient om  alpha(delC/delt) = Div(-kgradC)+const(x)_source
+                  NUMBER_OF_MATERIALS_COMPONENTS=NUMBER_OF_DIMENSIONS+1
+                  DIMENSION_MULTIPLIER=1
                 ELSEIF(EQUATIONS_SET%SPECIFICATION(3)==EQUATIONS_SET_CONSTANT_REAC_DIFF_SUBTYPE) THEN
                   !Constant reaction + diffusion. Materials field has 1 diffuse coeff for each dimension
                   !plus one for the storage coefficient om  alpha(delC/delt) = Div(-kgradC)+const(x)_source
@@ -349,7 +355,8 @@ CONTAINS
                     & component_idx,FIELD_NODE_BASED_INTERPOLATION,err,error,*999)
                 ENDDO !components_idx
                 !Default the storage co-efficient to the first geometric interpolation setup with constant interpolation
-                IF(EQUATIONS_SET%SPECIFICATION(3)==EQUATIONS_SET_CELLML_REAC_SPLIT_REAC_DIFF_SUBTYPE) THEN
+                IF(EQUATIONS_SET%SPECIFICATION(3)==EQUATIONS_SET_CELLML_REAC_SPLIT_REAC_DIFF_SUBTYPE &
+                  & .OR. EQUATIONS_SET%SPECIFICATION(3)==EQUATIONS_SET_CELLML_REAC_MOVING_DOMAIN_SUBTYPE) THEN
                   component_idx=NUMBER_OF_MATERIALS_COMPONENTS
                   CALL FIELD_COMPONENT_MESH_COMPONENT_GET(EQUATIONS_SET%GEOMETRY%GEOMETRIC_FIELD,FIELD_U_VARIABLE_TYPE, &
                     & 1,GEOMETRIC_COMPONENT_NUMBER,err,error,*999)
@@ -373,6 +380,7 @@ CONTAINS
                 CALL FIELD_NUMBER_OF_COMPONENTS_GET(EQUATIONS_SET%GEOMETRY%GEOMETRIC_FIELD,FIELD_U_VARIABLE_TYPE, &
                   & NUMBER_OF_DIMENSIONS,err,error,*999)
                 IF(EQUATIONS_SET%SPECIFICATION(3)==EQUATIONS_SET_CELLML_REAC_SPLIT_REAC_DIFF_SUBTYPE .OR. &
+                 & EQUATIONS_SET%SPECIFICATION(3)==EQUATIONS_SET_CELLML_REAC_MOVING_DOMAIN_SUBTYPE .OR. &
                  & EQUATIONS_SET%SPECIFICATION(3)==EQUATIONS_SET_CONSTANT_REAC_DIFF_SUBTYPE) THEN
                   !Reaction Diffusion with cellml. Materials field components are 1 for storage coeff plus one for each dimension i.e., k
                   CALL FIELD_NUMBER_OF_COMPONENTS_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_U_VARIABLE_TYPE,NUMBER_OF_DIMENSIONS+1, &
@@ -395,6 +403,7 @@ CONTAINS
               CALL FIELD_NUMBER_OF_COMPONENTS_GET(EQUATIONS_SET%GEOMETRY%GEOMETRIC_FIELD,FIELD_U_VARIABLE_TYPE, &
                 & NUMBER_OF_DIMENSIONS,err,error,*999)
               IF(EQUATIONS_SET%SPECIFICATION(3)==EQUATIONS_SET_CELLML_REAC_SPLIT_REAC_DIFF_SUBTYPE .OR. &
+               & EQUATIONS_SET%SPECIFICATION(3)==EQUATIONS_SET_CELLML_REAC_MOVING_DOMAIN_SUBTYPE .OR. &
                & EQUATIONS_SET%SPECIFICATION(3)==EQUATIONS_SET_CONSTANT_REAC_DIFF_SUBTYPE) THEN
                 !Reaction Diffusion with cellml. Materials field components are 1 plus one for each dimension i.e.,storage coeff, and k.
                 NUMBER_OF_MATERIALS_COMPONENTS=NUMBER_OF_DIMENSIONS+1
@@ -547,7 +556,7 @@ CONTAINS
         SELECT CASE(EQUATIONS_SET_SETUP%ACTION_TYPE)
         !Set start action
         CASE(EQUATIONS_SET_SETUP_START_ACTION)
-          INDEPENDENT_FIELD_NUMBER_OF_VARIABLES=5
+          INDEPENDENT_FIELD_NUMBER_OF_VARIABLES=4
           !Create the auto created independent field
           IF(EQUATIONS_SET%INDEPENDENT%INDEPENDENT_FIELD_AUTO_CREATED) THEN
             !start field creation with name 'INDEPENDENT_FIELD'
@@ -572,13 +581,9 @@ CONTAINS
             CALL FIELD_NUMBER_OF_VARIABLES_SET_AND_LOCK(EQUATIONS_SET%INDEPENDENT%INDEPENDENT_FIELD, &
               & INDEPENDENT_FIELD_NUMBER_OF_VARIABLES,err,error,*999)
             CALL FIELD_VARIABLE_TYPES_SET_AND_LOCK(EQUATIONS_SET%INDEPENDENT%INDEPENDENT_FIELD,[FIELD_U_VARIABLE_TYPE, &
-                 & FIELD_DELUDELN_VARIABLE_TYPE, FIELD_V_VARIABLE_TYPE, &
-                 & FIELD_U1_VARIABLE_TYPE, FIELD_U2_VARIABLE_TYPE],err,error,*999)
-            !Velocity Field
+                & FIELD_V_VARIABLE_TYPE, FIELD_U1_VARIABLE_TYPE, FIELD_U2_VARIABLE_TYPE],err,error,*999)
+            !Jacobian
             CALL FIELD_DIMENSION_SET_AND_LOCK(EQUATIONS_SET%INDEPENDENT%INDEPENDENT_FIELD,FIELD_U_VARIABLE_TYPE, &
-              & FIELD_VECTOR_DIMENSION_TYPE,err,error,*999)
-            !Velocity Gradient Field
-            CALL FIELD_DIMENSION_SET_AND_LOCK(EQUATIONS_SET%INDEPENDENT%INDEPENDENT_FIELD,FIELD_DELUDELN_VARIABLE_TYPE, &
               & FIELD_VECTOR_DIMENSION_TYPE,err,error,*999)
             !TODO Temperary Field to store time step. Need to delete once time step is accessed in Finite Element Calculate
             CALL FIELD_DIMENSION_SET_AND_LOCK(EQUATIONS_SET%INDEPENDENT%INDEPENDENT_FIELD,FIELD_V_VARIABLE_TYPE, &
@@ -590,8 +595,6 @@ CONTAINS
             CALL FIELD_DIMENSION_SET_AND_LOCK(EQUATIONS_SET%INDEPENDENT%INDEPENDENT_FIELD,FIELD_U2_VARIABLE_TYPE, &
               & FIELD_VECTOR_DIMENSION_TYPE,err,error,*999)
             CALL FIELD_DATA_TYPE_SET_AND_LOCK(EQUATIONS_SET%INDEPENDENT%INDEPENDENT_FIELD,FIELD_U_VARIABLE_TYPE, &
-              & FIELD_DP_TYPE,err,error,*999)
-            CALL FIELD_DATA_TYPE_SET_AND_LOCK(EQUATIONS_SET%INDEPENDENT%INDEPENDENT_FIELD,FIELD_DELUDELN_VARIABLE_TYPE, &
               & FIELD_DP_TYPE,err,error,*999)
             CALL FIELD_DATA_TYPE_SET_AND_LOCK(EQUATIONS_SET%INDEPENDENT%INDEPENDENT_FIELD,FIELD_V_VARIABLE_TYPE, &
               & FIELD_DP_TYPE,err,error,*999)
@@ -606,8 +609,6 @@ CONTAINS
             CALL FIELD_NUMBER_OF_COMPONENTS_SET_AND_LOCK(EQUATIONS_SET%INDEPENDENT%INDEPENDENT_FIELD, & 
               & FIELD_U_VARIABLE_TYPE,INDEPENDENT_FIELD_NUMBER_OF_COMPONENTS,err,error,*999)
             CALL FIELD_NUMBER_OF_COMPONENTS_SET_AND_LOCK(EQUATIONS_SET%INDEPENDENT%INDEPENDENT_FIELD, & 
-              & FIELD_DELUDELN_VARIABLE_TYPE,INDEPENDENT_FIELD_NUMBER_OF_COMPONENTS,err,error,*999)
-            CALL FIELD_NUMBER_OF_COMPONENTS_SET_AND_LOCK(EQUATIONS_SET%INDEPENDENT%INDEPENDENT_FIELD, & 
               & FIELD_V_VARIABLE_TYPE,INDEPENDENT_FIELD_NUMBER_OF_COMPONENTS,err,error,*999)
             CALL FIELD_NUMBER_OF_COMPONENTS_SET_AND_LOCK(EQUATIONS_SET%INDEPENDENT%INDEPENDENT_FIELD, & 
               & FIELD_U1_VARIABLE_TYPE,INDEPENDENT_FIELD_NUMBER_OF_COMPONENTS,err,error,*999)
@@ -617,19 +618,15 @@ CONTAINS
               CALL FIELD_COMPONENT_MESH_COMPONENT_GET(EQUATIONS_SET%GEOMETRY%GEOMETRIC_FIELD,FIELD_U_VARIABLE_TYPE, &
                 & component_idx,GEOMETRIC_MESH_COMPONENT,err,error,*999)
               CALL FIELD_COMPONENT_MESH_COMPONENT_SET(EQUATIONS_SET%INDEPENDENT%INDEPENDENT_FIELD,FIELD_U_VARIABLE_TYPE, &
-                 & component_idx,GEOMETRIC_MESH_COMPONENT,err,error,*999)
-              CALL FIELD_COMPONENT_MESH_COMPONENT_SET(EQUATIONS_SET%INDEPENDENT%INDEPENDENT_FIELD,FIELD_DELUDELN_VARIABLE_TYPE, &
                 & component_idx,GEOMETRIC_MESH_COMPONENT,err,error,*999)
               CALL FIELD_COMPONENT_MESH_COMPONENT_SET(EQUATIONS_SET%INDEPENDENT%INDEPENDENT_FIELD,FIELD_V_VARIABLE_TYPE, &
-                 & component_idx,GEOMETRIC_MESH_COMPONENT,err,error,*999)
+                & component_idx,GEOMETRIC_MESH_COMPONENT,err,error,*999)
               CALL FIELD_COMPONENT_MESH_COMPONENT_SET(EQUATIONS_SET%INDEPENDENT%INDEPENDENT_FIELD,FIELD_U1_VARIABLE_TYPE, &
-                 & component_idx,GEOMETRIC_MESH_COMPONENT,err,error,*999)
+                & component_idx,GEOMETRIC_MESH_COMPONENT,err,error,*999)
               CALL FIELD_COMPONENT_MESH_COMPONENT_SET(EQUATIONS_SET%INDEPENDENT%INDEPENDENT_FIELD,FIELD_U2_VARIABLE_TYPE, &
-                 & component_idx,GEOMETRIC_MESH_COMPONENT,err,error,*999)
+                & component_idx,GEOMETRIC_MESH_COMPONENT,err,error,*999)
               CALL FIELD_COMPONENT_INTERPOLATION_SET_AND_LOCK(EQUATIONS_SET%INDEPENDENT%INDEPENDENT_FIELD, &
                 & FIELD_U_VARIABLE_TYPE,component_idx,FIELD_NODE_BASED_INTERPOLATION,err,error,*999)
-              CALL FIELD_COMPONENT_INTERPOLATION_SET_AND_LOCK(EQUATIONS_SET%INDEPENDENT%INDEPENDENT_FIELD, &
-                & FIELD_DELUDELN_VARIABLE_TYPE,component_idx,FIELD_NODE_BASED_INTERPOLATION,err,error,*999)
               CALL FIELD_COMPONENT_INTERPOLATION_SET_AND_LOCK(EQUATIONS_SET%INDEPENDENT%INDEPENDENT_FIELD, &
                 & FIELD_V_VARIABLE_TYPE,component_idx,FIELD_NODE_BASED_INTERPOLATION,err,error,*999)
               CALL FIELD_COMPONENT_INTERPOLATION_SET_AND_LOCK(EQUATIONS_SET%INDEPENDENT%INDEPENDENT_FIELD, &
@@ -679,6 +676,8 @@ CONTAINS
               CALL Equations_CreateStart(EQUATIONS_SET,EQUATIONS,err,error,*999)
               SELECT CASE(EQUATIONS_SET%SPECIFICATION(3))
               CASE(EQUATIONS_SET_CELLML_REAC_SPLIT_REAC_DIFF_SUBTYPE)
+                CALL Equations_LinearityTypeSet(EQUATIONS,EQUATIONS_LINEAR,err,error,*999)
+              CASE(EQUATIONS_SET_CELLML_REAC_MOVING_DOMAIN_SUBTYPE)
                 CALL Equations_LinearityTypeSet(EQUATIONS,EQUATIONS_LINEAR,err,error,*999)
               CASE(EQUATIONS_SET_CONSTANT_REAC_DIFF_SUBTYPE)
                 CALL Equations_LinearityTypeSet(EQUATIONS,EQUATIONS_LINEAR,err,error,*999)
@@ -805,6 +804,7 @@ CONTAINS
       END IF
       SELECT CASE(EQUATIONS_SET%SPECIFICATION(3))
       CASE(EQUATIONS_SET_CELLML_REAC_SPLIT_REAC_DIFF_SUBTYPE, &
+         & EQUATIONS_SET_CELLML_REAC_MOVING_DOMAIN_SUBTYPE, &
          & EQUATIONS_SET_CELLML_REAC_NO_SPLIT_REAC_DIFF_SUBTYPE, &
          & EQUATIONS_SET_CONSTANT_REAC_DIFF_SUBTYPE)        
         SELECT CASE(SOLUTION_METHOD)
@@ -869,6 +869,8 @@ CONTAINS
       SELECT CASE(subtype)
       CASE(EQUATIONS_SET_CELLML_REAC_SPLIT_REAC_DIFF_SUBTYPE)
         !ok
+      CASE(EQUATIONS_SET_CELLML_REAC_MOVING_DOMAIN_SUBTYPE)
+        !ok
       CASE(EQUATIONS_SET_CELLML_REAC_NO_SPLIT_REAC_DIFF_SUBTYPE)
         CALL FlagError("Not implemented.",err,error,*999)
       CASE(EQUATIONS_SET_CONSTANT_REAC_DIFF_SUBTYPE)
@@ -906,15 +908,15 @@ CONTAINS
 
     !Argument variables
     TYPE(EQUATIONS_SET_TYPE), POINTER :: EQUATIONS_SET !<A pointer to the equations set to perform the finite element calculations on
-    INTEGER(INTG), INTENT(IN) :: ELEMENT_NUMBER !<The element number to calculate
+    INTEGER(INTG), INTENT(IN) :: ELEMENT_NUMBER !<The element number to calculate 
     INTEGER(INTG), INTENT(OUT) :: err !<The error code
     TYPE(VARYING_STRING), INTENT(OUT) :: error !<The error string
     !Local Variables
     INTEGER(INTG) FIELD_VAR_TYPE,mh,mhs,ms,ng,nh,nhs,ni,nj,ns,component_idx
     LOGICAL :: USE_FIBRES
     REAL(DP) :: DIFFUSIVITY(3,3),DPHIDX(3,64),PHI(3,64),DZDNU(3,3),PREVDZDNU(3,3),RWG,SUM,STORAGE_COEFFICIENT,C_PARAM
-    REAL(DP) :: Timestep, Jznu, prevJznu, dJdt, VELOCITY, VELOCITYGRAD, Jznu_ref, prevJznu_ref
-    REAL(DP) :: DZDNUT(3,3),DZDNUT_DZDNU(3,3),DZDNUT_DZDNU_INV(3,3),prevDZDNUT(3,3),prevDZDNUT_DZDNU(3,3),prevDZDNUT_DZDNU_INV(3,3)
+    REAL(DP) :: timestep, Jznu, prevJznu, dJdt, Jznu_ref, prevJznu_ref
+    REAL(DP) :: DZDNUT(3,3),DZDNUT_DZDNU(3,3),DZDNU_INV(3,3),DZDNUT_INV(3,3)
     TYPE(BASIS_TYPE), POINTER :: DEPENDENT_BASIS,GEOMETRIC_BASIS,FIBRE_BASIS
     TYPE(FIELD_INTERPOLATED_POINT_TYPE), POINTER :: geometricInterpPoint, prevIndependentInterpPoint,independentInterpPoint
     TYPE(FIELD_INTERPOLATED_POINT_TYPE), POINTER :: fibreInterpolatedPoint
@@ -967,7 +969,9 @@ CONTAINS
         dependentField=>equations%interpolation%dependentField
         geometricField=>equations%interpolation%geometricField
         materialsField=>equations%interpolation%materialsField
-        independentField=>equations%interpolation%independentField
+        IF(EQUATIONS_SET%SPECIFICATION(3)==EQUATIONS_SET_CELLML_REAC_MOVING_DOMAIN_SUBTYPE) THEN
+          independentField=>equations%interpolation%independentField
+        ENDIF
         IF(EQUATIONS_SET%SPECIFICATION(3)==EQUATIONS_SET_CELLML_REAC_NO_SPLIT_REAC_DIFF_SUBTYPE .OR. &
             & EQUATIONS_SET%SPECIFICATION(3)==EQUATIONS_SET_CONSTANT_REAC_DIFF_SUBTYPE) THEN
            sourceField=>equations%interpolation%sourceField
@@ -988,16 +992,18 @@ CONTAINS
           & geometricInterpParameters(FIELD_U_VARIABLE_TYPE)%ptr,err,error,*999)
         CALL FIELD_INTERPOLATION_PARAMETERS_ELEMENT_GET(FIELD_VALUES_SET_TYPE,ELEMENT_NUMBER,equations%interpolation% &
           & materialsInterpParameters(FIELD_U_VARIABLE_TYPE)%ptr,err,error,*999)
-        CALL FIELD_INTERPOLATION_PARAMETERS_ELEMENT_GET(FIELD_VALUES_SET_TYPE,ELEMENT_NUMBER,equations%interpolation% &
-          & independentInterpParameters(FIELD_U_VARIABLE_TYPE)%ptr,err,error,*999)
-        CALL FIELD_INTERPOLATION_PARAMETERS_ELEMENT_GET(FIELD_VALUES_SET_TYPE,ELEMENT_NUMBER,equations%interpolation% &
-          & independentInterpParameters(FIELD_DELUDELN_VARIABLE_TYPE)%ptr,err,error,*999)
-        CALL FIELD_INTERPOLATION_PARAMETERS_ELEMENT_GET(FIELD_VALUES_SET_TYPE,ELEMENT_NUMBER,equations%interpolation% &
-          & independentInterpParameters(FIELD_V_VARIABLE_TYPE)%ptr,err,error,*999)
-        CALL FIELD_INTERPOLATION_PARAMETERS_ELEMENT_GET(FIELD_VALUES_SET_TYPE,ELEMENT_NUMBER,equations%interpolation% &
-          & independentInterpParameters(FIELD_U1_VARIABLE_TYPE)%ptr,err,error,*999)
-        CALL FIELD_INTERPOLATION_PARAMETERS_ELEMENT_GET(FIELD_VALUES_SET_TYPE,ELEMENT_NUMBER,equations%interpolation% &
-          & independentInterpParameters(FIELD_U2_VARIABLE_TYPE)%ptr,err,error,*999)
+        IF(EQUATIONS_SET%SPECIFICATION(3)==EQUATIONS_SET_CELLML_REAC_MOVING_DOMAIN_SUBTYPE) THEN
+          CALL FIELD_INTERPOLATION_PARAMETERS_ELEMENT_GET(FIELD_VALUES_SET_TYPE,ELEMENT_NUMBER,equations%interpolation% &
+            & independentInterpParameters(FIELD_U_VARIABLE_TYPE)%ptr,err,error,*999)
+          CALL FIELD_INTERPOLATION_PARAMETERS_ELEMENT_GET(FIELD_VALUES_SET_TYPE,ELEMENT_NUMBER,equations%interpolation% &
+            & independentInterpParameters(FIELD_V_VARIABLE_TYPE)%ptr,err,error,*999)
+          CALL FIELD_INTERPOLATION_PARAMETERS_ELEMENT_GET(FIELD_VALUES_SET_TYPE,ELEMENT_NUMBER,equations%interpolation% &
+            & independentInterpParameters(FIELD_U1_VARIABLE_TYPE)%ptr,err,error,*999)
+          CALL FIELD_INTERPOLATION_PARAMETERS_ELEMENT_GET(FIELD_VALUES_SET_TYPE,ELEMENT_NUMBER,equations%interpolation% &
+            & independentInterpParameters(FIELD_U2_VARIABLE_TYPE)%ptr,err,error,*999)
+          !CALL FIELD_INTERPOLATION_PARAMETERS_ELEMENT_GET(FIELD_PREVIOUS_VALUES_SET_TYPE,ELEMENT_NUMBER,equations%interpolation% &
+          !  & independentInterpParameters(FIELD_U1_VARIABLE_TYPE)%ptr,err,error,*999)
+        ENDIF
         IF(USE_FIBRES) CALL FIELD_INTERPOLATION_PARAMETERS_ELEMENT_GET(FIELD_VALUES_SET_TYPE,ELEMENT_NUMBER,equations% &
           & interpolation%fibreInterpParameters(FIELD_U_VARIABLE_TYPE)%ptr,err,error,*999)
         IF(EQUATIONS_SET%SPECIFICATION(3)==EQUATIONS_SET_CELLML_REAC_NO_SPLIT_REAC_DIFF_SUBTYPE .OR. &
@@ -1018,10 +1024,12 @@ CONTAINS
         FIELD_VAR_TYPE=FIELD_VARIABLE%VARIABLE_TYPE
         geometricInterpPoint=>equations%interpolation%geometricInterpPoint(FIELD_U_VARIABLE_TYPE)%ptr
         geometricInterpPointMetrics=>equations%interpolation%geometricInterpPointMetrics(FIELD_U_VARIABLE_TYPE)%ptr
-        prevIndependentInterpPoint=>equations%interpolation%independentInterpPoint(FIELD_U1_VARIABLE_TYPE)%ptr
-        independentInterpPoint=>equations%interpolation%independentInterpPoint(FIELD_U2_VARIABLE_TYPE)%ptr        
-        prevIndependentInterpPointMetrics=>equations%interpolation%independentInterpPointMetrics(FIELD_U1_VARIABLE_TYPE)%ptr
-        independentInterpPointMetrics=>equations%interpolation%independentInterpPointMetrics(FIELD_U2_VARIABLE_TYPE)%ptr
+        IF(EQUATIONS_SET%SPECIFICATION(3)==EQUATIONS_SET_CELLML_REAC_MOVING_DOMAIN_SUBTYPE) THEN
+          prevIndependentInterpPoint=>equations%interpolation%independentInterpPoint(FIELD_U1_VARIABLE_TYPE)%ptr
+          independentInterpPoint=>equations%interpolation%independentInterpPoint(FIELD_U2_VARIABLE_TYPE)%ptr        
+          prevIndependentInterpPointMetrics=>equations%interpolation%independentInterpPointMetrics(FIELD_U1_VARIABLE_TYPE)%ptr
+          independentInterpPointMetrics=>equations%interpolation%independentInterpPointMetrics(FIELD_U2_VARIABLE_TYPE)%ptr
+        ENDIF 
         IF(stiffnessMatrix%updateMatrix.OR.dampingMatrix%updateMatrix.OR.rhsVector%updateVector) THEN
           !Loop over gauss points
           DO ng=1,QUADRATURE_SCHEME%NUMBER_OF_GAUSS
@@ -1029,22 +1037,20 @@ CONTAINS
               & geometricInterpPoint(FIELD_U_VARIABLE_TYPE)%ptr,err,error,*999)
             CALL FIELD_INTERPOLATE_GAUSS(NO_PART_DERIV,BASIS_DEFAULT_QUADRATURE_SCHEME,ng,equations%interpolation% &
               & materialsInterpPoint(FIELD_U_VARIABLE_TYPE)%ptr,err,error,*999)
-            CALL FIELD_INTERPOLATE_GAUSS(NO_PART_DERIV,BASIS_DEFAULT_QUADRATURE_SCHEME,ng,equations%interpolation% &
-              & independentInterpPoint(FIELD_U_VARIABLE_TYPE)%ptr,err,error,*999)
-            CALL FIELD_INTERPOLATE_GAUSS(NO_PART_DERIV,BASIS_DEFAULT_QUADRATURE_SCHEME,ng,equations%interpolation% &
-              & independentInterpPoint(FIELD_DELUDELN_VARIABLE_TYPE)%ptr,err,error,*999)
-            CALL FIELD_INTERPOLATE_GAUSS(NO_PART_DERIV,BASIS_DEFAULT_QUADRATURE_SCHEME,ng,equations%interpolation% &
-              & independentInterpPoint(FIELD_V_VARIABLE_TYPE)%ptr,err,error,*999)
-            CALL FIELD_INTERPOLATE_GAUSS(FIRST_PART_DERIV,BASIS_DEFAULT_QUADRATURE_SCHEME,ng,equations%interpolation% &
-              & independentInterpPoint(FIELD_U1_VARIABLE_TYPE)%ptr,err,error,*999)
-            CALL FIELD_INTERPOLATE_GAUSS(FIRST_PART_DERIV,BASIS_DEFAULT_QUADRATURE_SCHEME,ng,equations%interpolation% &
-              & independentInterpPoint(FIELD_U2_VARIABLE_TYPE)%ptr,err,error,*999)
             CALL FIELD_INTERPOLATED_POINT_METRICS_CALCULATE(GEOMETRIC_BASIS%NUMBER_OF_XI, &
               & geometricInterpPointMetrics,err,error,*999)
-            CALL FIELD_INTERPOLATED_POINT_METRICS_CALCULATE(GEOMETRIC_BASIS%NUMBER_OF_XI, &
-              & prevIndependentInterpPointMetrics,err,error,*999)
-            CALL FIELD_INTERPOLATED_POINT_METRICS_CALCULATE(GEOMETRIC_BASIS%NUMBER_OF_XI, &
-              & IndependentInterpPointMetrics,err,error,*999)
+            IF(EQUATIONS_SET%SPECIFICATION(3)==EQUATIONS_SET_CELLML_REAC_MOVING_DOMAIN_SUBTYPE) THEN
+              CALL FIELD_INTERPOLATE_GAUSS(NO_PART_DERIV,BASIS_DEFAULT_QUADRATURE_SCHEME,ng,equations%interpolation% &
+                & independentInterpPoint(FIELD_V_VARIABLE_TYPE)%ptr,err,error,*999)
+              CALL FIELD_INTERPOLATE_GAUSS(FIRST_PART_DERIV,BASIS_DEFAULT_QUADRATURE_SCHEME,ng,equations%interpolation% &
+                & independentInterpPoint(FIELD_U1_VARIABLE_TYPE)%ptr,err,error,*999)
+              CALL FIELD_INTERPOLATE_GAUSS(FIRST_PART_DERIV,BASIS_DEFAULT_QUADRATURE_SCHEME,ng,equations%interpolation% &
+                & independentInterpPoint(FIELD_U2_VARIABLE_TYPE)%ptr,err,error,*999)
+              CALL FIELD_INTERPOLATED_POINT_METRICS_CALCULATE(GEOMETRIC_BASIS%NUMBER_OF_XI, &
+                & prevIndependentInterpPointMetrics,err,error,*999)
+              CALL FIELD_INTERPOLATED_POINT_METRICS_CALCULATE(GEOMETRIC_BASIS%NUMBER_OF_XI, &
+                & IndependentInterpPointMetrics,err,error,*999)
+            ENDIF
       
             
             IF(USE_FIBRES) THEN
@@ -1060,26 +1066,35 @@ CONTAINS
                 & sourceInterpPoint(FIELD_U_VARIABLE_TYPE)%ptr,err,error,*999)
             ENDIF
             nj = GEOMETRIC_VARIABLE%NUMBER_OF_COMPONENTS
-            CALL ReactionDiffusion_GaussDeformationGradientTensor(independentInterpPointMetrics, &
-                 & geometricInterpPointMetrics, &
-                 & fibreInterpolatedPoint,dzdnu,ELEMENT_NUMBER,err,error,*999)
-            CALL MatrixTranspose(dZdNu(1:nj,1:nj), dZdNuT(1:nj,1:nj),err,error,*999)
-            CALL MatrixProduct(dZdNuT(1:nj,1:nj),dZdNu(1:nj,1:nj),dZdNuT_dZdNu(1:nj,1:nj),err,error,*999)
-            CALL Invert(dZdNuT_dZdNu(1:nj,1:nj),dZdNuT_dZdNu_Inv(1:nj,1:nj),Jznu,err,error,*999)
-            CALL Determinant(dZdNu(1:nj,1:nj),Jznu,err,error,*999)
 
+            IF(EQUATIONS_SET%SPECIFICATION(3)==EQUATIONS_SET_CELLML_REAC_MOVING_DOMAIN_SUBTYPE) THEN
+              !dZdNU and Jznu (deformation gradient tensor) Current Time Step
+              CALL ReactionDiffusion_GaussDeformationGradientTensor(independentInterpPointMetrics, &
+                  & geometricInterpPointMetrics, &
+                  & fibreInterpolatedPoint,dzdnu,ELEMENT_NUMBER,err,error,*999)
+              CALL MatrixTranspose(dZdNu(1:nj,1:nj), dZdNuT(1:nj,1:nj),err,error,*999)
 
-            !dZdNu and Jznu Previous
-            CALL ReactionDiffusion_GaussDeformationGradientTensor(prevIndependentInterpPointMetrics, &
-                   & geometricInterpPointMetrics, &
-                   & fibreInterpolatedPoint,prevdZdNU,ELEMENT_NUMBER,err,error,*999)
-            CALL Determinant(prevdZdNu(1:nj,1:nj),prevJznu,err,error,*999)
-           
-            !TODO This was a solution for 1D. Working on Generalizing this to 2D/3D using deformation Gradient Tensors
-            Jznu_ref = independentInterpPointMetrics%JACOBIAN/geometricInterpPointMetrics%JACOBIAN
-            prevJznu_ref = prevIndependentInterpPointMetrics%JACOBIAN/geometricInterpPointMetrics%JACOBIAN
-            Timestep=equations%interpolation%independentInterpPoint(FIELD_V_VARIABLE_TYPE)%ptr%VALUES(nj,1)
-            dJdt= ((Jznu - prevJznu) / (Timestep))
+              CALL Invert(dZdNuT(1:nj,1:nj),dZdNuT_Inv(1:nj,1:nj),Jznu,err,error,*999)
+              CALL Invert(dZdNu(1:nj,1:nj),dZdNu_Inv(1:nj,1:nj),Jznu,err,error,*999)
+              CALL Determinant(dZdNu(1:nj,1:nj),Jznu,err,error,*999)
+
+              !dZdNU and Jznu (deformation gradient tensor) Previous Time Step
+              CALL ReactionDiffusion_GaussDeformationGradientTensor(prevIndependentInterpPointMetrics, &
+                    & geometricInterpPointMetrics, &
+                    & fibreInterpolatedPoint,prevdZdNU,ELEMENT_NUMBER,err,error,*999)
+              CALL Determinant(prevdZdNu(1:nj,1:nj),prevJznu,err,error,*999)
+            
+              !TODO This was a solution for 1D. Working on Generalizing this to 2D/3D using deformation Gradient Tensors
+              Jznu_ref = independentInterpPointMetrics%JACOBIAN/geometricInterpPointMetrics%JACOBIAN
+              prevJznu_ref = prevIndependentInterpPointMetrics%JACOBIAN/geometricInterpPointMetrics%JACOBIAN
+              Timestep=equations%interpolation%independentInterpPoint(FIELD_V_VARIABLE_TYPE)%ptr%VALUES(nj,1) 
+              !equations%interpolation%independentInterpPoint(FIELD_V_VARIABLE_TYPE)%ptr%VALUES(nj,1) = TIMESTEP
+              dJdt= ((Jznu - prevJznu) / (TIMESTEP))
+            ELSE
+              dJdt = 0
+              Jznu = 1
+            ENDIF
+            WRITE(*,*) "Jared was here"
             !Calculate RWG.
             RWG=equations%interpolation%geometricInterpPointMetrics(FIELD_U_VARIABLE_TYPE)%ptr%JACOBIAN* &
               & QUADRATURE_SCHEME%GAUSS_WEIGHTS(ng)
@@ -1132,20 +1147,16 @@ CONTAINS
                 DO nh=1,FIELD_VARIABLE%NUMBER_OF_COMPONENTS
                   DO ns=1,DEPENDENT_BASIS%NUMBER_OF_ELEMENT_PARAMETERS
                     nhs=nhs+1
-                    SUM=0.0_DP
+                    SUM=0.0_DP!
                     IF(stiffnessMatrix%updateMatrix) THEN
                        DO ni=1,GEOMETRIC_VARIABLE%NUMBER_OF_COMPONENTS
                          DO nj=1,GEOMETRIC_VARIABLE%NUMBER_OF_COMPONENTS
-                           !Get the velocity (Used velocity for timestep, !TODO update names)
-                           !TODO Implement Advection in Separate Equation Set SubType
-                           VELOCITY=equations%interpolation%independentInterpPoint(FIELD_U_VARIABLE_TYPE)%ptr%VALUES(nj,1)
-                           VELOCITYGRAD= &
-                             & equations%interpolation%independentInterpPoint(FIELD_DELUDELN_VARIABLE_TYPE)%ptr%VALUES(nj,1)
-                           SUM=SUM-VELOCITY*PHI(ni,mhs)*DPHIDX(nj,nhs)/(Jznu)
 
-                           != u * nabla(w), u = function and w = deformation velocity. Captures rate of expanding element
-                           SUM=SUM+DIFFUSIVITY(ni,nj)*DPHIDX(ni,mhs)*DPHIDX(nj,nhs)*dZdNuT_dZdNu_Inv(ni,nj)
-                     
+                          IF(EQUATIONS_SET%SPECIFICATION(3)==EQUATIONS_SET_CELLML_REAC_MOVING_DOMAIN_SUBTYPE) THEN
+                            SUM=SUM+Jznu*dZdNu_Inv(ni,nj)*DIFFUSIVITY(ni,nj)*dZdNuT_Inv(ni,nj)*DPHIDX(ni,mhs)*DPHIDX(nj,nhs)
+                          ELSE
+                            SUM=SUM+DIFFUSIVITY(ni,nj)*DPHIDX(ni,mhs)*DPHIDX(nj,nhs)
+                          ENDIF
                        ENDDO !nj
                     ENDDO !ni
                       SUM=SUM+dJdt*(1/Jznu)* &
@@ -1156,7 +1167,7 @@ CONTAINS
                     IF(dampingMatrix%updateMatrix) THEN
                       dampingMatrix%elementMatrix%matrix(mhs,nhs)=dampingMatrix%elementMatrix%matrix(mhs,nhs)+ &
                         & QUADRATURE_SCHEME%GAUSS_BASIS_FNS(ms,NO_PART_DERIV,ng)* &
-                        & QUADRATURE_SCHEME%GAUSS_BASIS_FNS(ns,NO_PART_DERIV,ng)*STORAGE_COEFFICIENT*RWG
+                        & QUADRATURE_SCHEME%GAUSS_BASIS_FNS(ns,NO_PART_DERIV,ng)*Jznu*STORAGE_COEFFICIENT*RWG
                     ENDIF
                   ENDDO !ns
                 ENDDO !nh

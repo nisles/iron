@@ -936,7 +936,6 @@ CONTAINS
     TYPE(VARYING_STRING) :: localError
  
     ENTERS("EQUATIONS_SET_ASSEMBLE",err,error,*999)
-
     IF(.NOT.ASSOCIATED(equationsSet)) CALL FlagError("Equations set is not associated.",err,error,*999)
     NULLIFY(equations)
     CALL EquationsSet_EquationsGet(equationsSet,equations,err,error,*999)
@@ -1096,7 +1095,6 @@ CONTAINS
     TYPE(FIELD_TYPE), POINTER :: dependentField
     
     ENTERS("EquationsSet_AssembleDynamicLinearFEM",err,error,*999)
-
     IF(.NOT.ASSOCIATED(equationsSet)) CALL FlagError("Equations set is not associated.",err,error,*999)
 
     NULLIFY(dependentField)
@@ -1388,7 +1386,6 @@ CONTAINS
     ENTERS("EquationsSet_AssembleStaticNonlinearFEM",err,error,*999)
 
     IF(.NOT.ASSOCIATED(equationsSet)) CALL FlagError("Equations set is not associated.",err,error,*999)
-
     NULLIFY(dependentField)
     CALL EquationsSet_DependentFieldGet(equationsSet,dependentField,err,error,*999)
     NULLIFY(equations)
@@ -1397,7 +1394,6 @@ CONTAINS
     CALL Equations_VectorEquationsGet(equations,vectorEquations,err,error,*999)
     NULLIFY(vectorMatrices)
     CALL EquationsVector_VectorMatricesGet(vectorEquations,vectorMatrices,err,error,*999)
-
     IF(equations%outputType>=EQUATIONS_TIMING_OUTPUT) THEN
       CALL CPUTimer(USER_CPU,userTime1,err,error,*999)
       CALL CPUTimer(SYSTEM_CPU,systemTime1,err,error,*999)
@@ -1477,7 +1473,6 @@ CONTAINS
     IF(equations%outputType>=EQUATIONS_MATRIX_OUTPUT) THEN
       CALL EquationsMatrices_VectorOutput(GENERAL_OUTPUT_TYPE,vectorMatrices,err,error,*999)
     ENDIF
-       
     EXITS("EquationsSet_AssembleStaticNonlinearFEM")
     RETURN
 999 ERRORSEXITS("EquationsSet_AssembleStaticNonlinearFEM",err,error)
@@ -2988,7 +2983,7 @@ CONTAINS
     TYPE(VARYING_STRING) :: localError
     
     ENTERS("EquationsSet_FiniteElementResidualEvaluate",err,error,*999)
-
+    
     IF(.NOT.ASSOCIATED(equationsSet)) CALL FlagError("Equations set is not associated.",err,error,*999)
     NULLIFY(equations)
     CALL EquationsSet_EquationsGet(equationsSet,equations,err,error,*999)

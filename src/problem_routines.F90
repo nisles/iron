@@ -361,7 +361,6 @@ CONTAINS
     TYPE(VARYING_STRING) :: localError
     
     ENTERS("PROBLEM_CONTROL_LOOP_SOLVE",err,error,*999)
-
     IF(ASSOCIATED(CONTROL_LOOP)) THEN
       IF(CONTROL_LOOP%CONTROL_LOOP_FINISHED) THEN
         !Solve this control loop
@@ -2730,9 +2729,7 @@ CONTAINS
 #ifdef TAUPROF
     CALL TAU_STATIC_PHASE_START('Pre solve')
 #endif
-      
     CALL Problem_SolverPreSolve(solver,err,error,*999)
-      
 #ifdef TAUPROF
     CALL TAU_STATIC_PHASE_STOP('Pre solve')
     
@@ -2760,9 +2757,7 @@ CONTAINS
       
     CALL TAU_STATIC_PHASE_START('Post solve')
 #endif
-    
     CALL Problem_SolverPostSolve(solver,err,error,*999)
-    
 #ifdef TAUPROF
     CALL TAU_STATIC_PHASE_STOP('Post solve')
 #endif

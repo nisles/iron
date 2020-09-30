@@ -7480,6 +7480,7 @@ CONTAINS
                   & FIELD_U_VARIABLE_TYPE,EQUATIONS_SET_FIELD_NUMBER_OF_COMPONENTS,err,error,*999)
               ELSE
                 !Check the user specified field
+                WRITE(*,*) "JARED FINITE ELASTICITY FIELD CHECK 1"
                 CALL FIELD_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_GENERAL_TYPE,err,error,*999)
                 CALL FIELD_DEPENDENT_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_INDEPENDENT_TYPE,err,error,*999)
                 CALL FIELD_NUMBER_OF_VARIABLES_CHECK(EQUATIONS_SET_SETUP%FIELD,EQUATIONS_SET_FIELD_NUMBER_OF_VARIABLES, &
@@ -7773,6 +7774,7 @@ CONTAINS
                 END SELECT
               ELSE
                 !Check the user specified field
+                WRITE(*,*) "JARED FIELD CHECK 1"
                 CALL FIELD_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_GEOMETRIC_GENERAL_TYPE,err,error,*999)
                 CALL FIELD_DEPENDENT_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_DEPENDENT_TYPE,err,error,*999)
                 IF(EQUATIONS_SET_SUBTYPE==EQUATIONS_SET_ACTIVE_STRAIN_SUBTYPE) THEN
@@ -7825,6 +7827,7 @@ CONTAINS
                     LOCAL_ERROR="Variable 2 of type "//TRIM(NumberToVString(EQUATIONS_SET_SETUP%FIELD%VARIABLES(2)% &
                       & VARIABLE_TYPE,"*",err,error))//" does not have a pressure values set type associated."
                 ENDIF
+                WRITE(*,*) "JARED WAS HERE 1"
                 SELECT CASE(EQUATIONS_SET%SOLUTION_METHOD)
                 CASE(EQUATIONS_SET_FEM_SOLUTION_METHOD)
                   DO component_idx=1,numberOfDimensions
@@ -7951,6 +7954,7 @@ CONTAINS
                 END SELECT
               ELSE
                 !Check the user specified field
+                WRITE(*,*) "JARED FIELD CHECK 2"
                 CALL FIELD_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_GEOMETRIC_GENERAL_TYPE,err,error,*999)
                 CALL FIELD_DEPENDENT_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_DEPENDENT_TYPE,err,error,*999)
                 CALL FIELD_NUMBER_OF_VARIABLES_CHECK(EQUATIONS_SET_SETUP%FIELD,2,err,error,*999)
@@ -7975,6 +7979,7 @@ CONTAINS
                   LOCAL_ERROR="Variable 2 of type "//TRIM(NumberToVString(EQUATIONS_SET_SETUP%FIELD%VARIABLES(2)% &
                     & VARIABLE_TYPE,"*",err,error))//" does not have a pressure values set type associated."
                 ENDIF
+                WRITE(*,*) "JARED WAS HERE 2"
                 SELECT CASE(EQUATIONS_SET%SOLUTION_METHOD)
                 CASE(EQUATIONS_SET_FEM_SOLUTION_METHOD)
                   DO component_idx=1,numberOfDimensions
@@ -8347,6 +8352,7 @@ CONTAINS
               ELSE !EQUATIONS_SET%DEPENDENT%DEPENDENT_FIELD_AUTO_CREATED
 
                 !Check the user specified field
+                WRITE(*,*) "JARED FIELD CHECK 3"
                 CALL FIELD_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_GEOMETRIC_GENERAL_TYPE,err,error,*999)
                 CALL FIELD_DEPENDENT_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_DEPENDENT_TYPE,err,error,*999)
                 IF(numberOfDimensions==3) THEN
@@ -8402,6 +8408,7 @@ CONTAINS
                     LOCAL_ERROR="Variable 2 of type "//TRIM(NumberToVString(EQUATIONS_SET_SETUP%FIELD%VARIABLES(2)% &
                       & VARIABLE_TYPE,"*",err,error))//" does not have a pressure values set type associated."
                 ENDIF
+                WRITE(*,*) "JARED WAS HERE 3"
                 SELECT CASE(EQUATIONS_SET%SOLUTION_METHOD)
                 CASE(EQUATIONS_SET_FEM_SOLUTION_METHOD)
                   DO component_idx=1,numberOfDimensions
@@ -8957,7 +8964,8 @@ CONTAINS
                 END SELECT
               ELSE
                 !Check the user specified field
-                CALL FIELD_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_GENERAL_TYPE,err,error,*999)
+                WRITE(*,*) "JARED FINITE ELASTICITY FIELD CHECK 2"
+                CALL FIELD_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_GEOMETRIC_GENERAL_TYPE,err,error,*999)
                 CALL FIELD_DEPENDENT_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_DEPENDENT_TYPE,err,error,*999)
                 CALL FIELD_NUMBER_OF_VARIABLES_CHECK(EQUATIONS_SET_SETUP%FIELD,4,err,error,*999)
                 CALL FIELD_VARIABLE_TYPES_CHECK(EQUATIONS_SET_SETUP%FIELD,[FIELD_U_VARIABLE_TYPE,FIELD_DELUDELN_VARIABLE_TYPE,&
@@ -9005,7 +9013,7 @@ CONTAINS
                       & FIELD%VARIABLES(4)% &
                       & VARIABLE_TYPE,"*",err,error))//" does not have an impermeable flag values set type associated."
                 ENDIF
-
+                ! WRITE(*,*) "JARED WAS HERE 4"
                 SELECT CASE(EQUATIONS_SET%SOLUTION_METHOD)
                 CASE(EQUATIONS_SET_FEM_SOLUTION_METHOD)
                   !Elasticity:
@@ -9017,10 +9025,10 @@ CONTAINS
                   ENDDO !component_idx
                   IF(EQUATIONS_SET_SUBTYPE==EQUATIONS_SET_INCOMPRESSIBLE_ELASTICITY_DRIVEN_DARCY_SUBTYPE) THEN
                     !If solid hydrostatic pressure is driving Darcy flow, check that pressure uses node based interpolation
-                    CALL FIELD_COMPONENT_INTERPOLATION_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_U_VARIABLE_TYPE,4, &
-                      & FIELD_NODE_BASED_INTERPOLATION,err,error,*999)
-                    CALL FIELD_COMPONENT_INTERPOLATION_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_DELUDELN_VARIABLE_TYPE,4, &
-                      & FIELD_NODE_BASED_INTERPOLATION,err,error,*999)
+                    CALL FIELD_COMPONENT_INTERPOLATION_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_U_VARIABLE_TYPE, &
+                      & numberOfDimensions+1,FIELD_NODE_BASED_INTERPOLATION,err,error,*999)
+                    CALL FIELD_COMPONENT_INTERPOLATION_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_DELUDELN_VARIABLE_TYPE, &
+                      & numberOfDimensions+1,FIELD_NODE_BASED_INTERPOLATION,err,error,*999)
                   ENDIF
                   !Darcy:
                   DO component_idx=1,NUMBER_OF_DARCY_COMPONENTS
@@ -9192,6 +9200,7 @@ CONTAINS
                 END SELECT
               ELSE
                 !Check the user specified field
+                WRITE(*,*) "JARED FIELD CHECK 4"
                 CALL FIELD_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_GEOMETRIC_GENERAL_TYPE,err,error,*999)
                 CALL FIELD_DEPENDENT_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_DEPENDENT_TYPE,err,error,*999)
                 CALL FIELD_NUMBER_OF_VARIABLES_CHECK(EQUATIONS_SET_SETUP%FIELD,4,err,error,*999)
@@ -9221,7 +9230,7 @@ CONTAINS
                     & NUMBER_OF_DARCY_COMPONENTS,err,error,*999)
                 CALL FIELD_NUMBER_OF_COMPONENTS_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_DELVDELN_VARIABLE_TYPE, &
                     & NUMBER_OF_DARCY_COMPONENTS,err,error,*999)
-
+                WRITE(*,*) "JARED WAS HERE 5"
                 SELECT CASE(EQUATIONS_SET%SOLUTION_METHOD)
                 CASE(EQUATIONS_SET_FEM_SOLUTION_METHOD)
                   !Elasticity:
@@ -9404,6 +9413,7 @@ CONTAINS
                 END SELECT
               ELSE
                 !Check the user specified field
+                WRITE(*,*) "JARED FIELD CHECK 5"
                 CALL FIELD_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_GEOMETRIC_GENERAL_TYPE,err,error,*999)
                 CALL FIELD_DEPENDENT_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_DEPENDENT_TYPE,err,error,*999)
                 !Get the number of Darcy compartments from the equations set field
@@ -9432,7 +9442,7 @@ CONTAINS
                     & err,error,*999)
 
                 ENDDO
-
+                WRITE(*,*) "JARED WAS HERE 6"
                 SELECT CASE(EQUATIONS_SET%SOLUTION_METHOD)
                 CASE(EQUATIONS_SET_FEM_SOLUTION_METHOD)
                   !Elasticity:
@@ -9695,6 +9705,7 @@ CONTAINS
                END SELECT
              ELSE !INDEPENDENT_FIELD_AUTO_CREATED
                !Check the user specified field
+              WRITE(*,*) "JARED FINITE ELASTICITY FIELD CHECK 3"
                CALL FIELD_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_GENERAL_TYPE,err,error,*999)
                CALL FIELD_DEPENDENT_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_INDEPENDENT_TYPE,err,error,*999)
                !Question:Better to leave it up for the user to play around?
@@ -9790,6 +9801,7 @@ CONTAINS
                END SELECT
              ELSE !INDEPENDENT_FIELD_AUTO_CREATED
                !Check the user specified field
+               WRITE(*,*) "JARED FINITE ELASTICITY FIELD CHECK 4"
                CALL FIELD_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_GENERAL_TYPE,err,error,*999)
                CALL FIELD_DEPENDENT_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_INDEPENDENT_TYPE,err,error,*999)
                !Question:Better to leave it up for the user to play around?
@@ -9924,6 +9936,7 @@ CONTAINS
                END SELECT
              ELSE !INDEPENDENT_FIELD_AUTO_CREATED
                !Check the user specified field
+                WRITE(*,*) "JARED FINITE ELASTICITY FIELD CHECK 5"
                CALL FIELD_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_GENERAL_TYPE,err,error,*999)
                CALL FIELD_DEPENDENT_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_INDEPENDENT_TYPE,err,error,*999)
                !Question:Better to leave it up for the user to play around?
@@ -10036,6 +10049,7 @@ CONTAINS
                END SELECT
              ELSE !INDEPENDENT_FIELD_AUTO_CREATED
                !Check the user specified field
+              WRITE(*,*) "JARED FINITE ELASTICITY FIELD CHECK 6"
                CALL FIELD_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_GENERAL_TYPE,err,error,*999)
                CALL FIELD_DEPENDENT_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_INDEPENDENT_TYPE,err,error,*999)
                !Question:Better to leave it up for the user to play around?
@@ -10129,6 +10143,7 @@ CONTAINS
                END SELECT
              ELSE !INDEPENDENT_FIELD_AUTO_CREATED
                !Check the user specified field
+               WRITE(*,*) "JARED FINITE ELASTICITY FIELD CHECK 7"
                CALL FIELD_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_GENERAL_TYPE,err,error,*999)
                CALL FIELD_DEPENDENT_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_INDEPENDENT_TYPE,err,error,*999)
                !Question:Better to leave it up for the user to play around?
@@ -10485,6 +10500,7 @@ CONTAINS
               END DO
             ELSE
               !Check the user specified field
+              WRITE(*,*) "JARED FINITE ELASTICITY FIELD CHECK 8"
               CALL FIELD_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_GENERAL_TYPE,err,error,*999)
               CALL FIELD_DEPENDENT_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_INDEPENDENT_TYPE,err,error,*999)
               CALL FIELD_NUMBER_OF_VARIABLES_CHECK(EQUATIONS_SET_SETUP%FIELD,1,err,error,*999)
@@ -10742,6 +10758,7 @@ CONTAINS
                 CALL FIELD_CREATE_FINISH(EQUATIONS_SET%derived%derivedField,err,error,*999)
               ELSE
                 !Check the user specified derived field
+                WRITE(*,*) "JARED FINITE ELASTICITY FIELD CHECK 9"
                 CALL FIELD_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_GENERAL_TYPE,err,error,*999)
                 CALL FIELD_DEPENDENT_TYPE_CHECK(EQUATIONS_SET_SETUP%FIELD,FIELD_DEPENDENT_TYPE,err,error,*999)
  
@@ -13013,7 +13030,10 @@ CONTAINS
           CALL Equations_VectorEquationsGet(equations,vectorEquations,err,error,*999)
           NULLIFY(vectorMapping)
           CALL EquationsVector_VectorMappingGet(vectorEquations,vectorMapping,err,error,*999)
+          WRITE(*,*) "JARED BEFORE BUG"
+          NULLIFY(fieldVariable)
           CALL Field_VariableGet(dependentField,FIELD_DELUDELN_VARIABLE_TYPE,fieldVariable,err,error,*999)
+          WRITE(*,*) "JARED AFTER BUG"
           CALL BOUNDARY_CONDITIONS_VARIABLE_GET(boundaryConditions,fieldVariable,boundaryConditionsVariable,err,error,*999)
           IF(ASSOCIATED(boundaryConditionsVariable)) THEN
             IF(boundaryConditionsVariable%DOF_COUNTS(BOUNDARY_CONDITION_PRESSURE)>0) THEN
@@ -13100,6 +13120,7 @@ CONTAINS
           CALL Equations_VectorEquationsGet(equations,vectorEquations,err,error,*999)
           NULLIFY(vectorMapping)
           CALL EquationsVector_VectorMappingGet(vectorEquations,vectorMapping,err,error,*999)
+          WRITE(*,*) "WAS JARED HERE?"
           CALL Field_VariableGet(dependentField,FIELD_U_VARIABLE_TYPE,fieldVariable,err,error,*999)
           CALL BOUNDARY_CONDITIONS_VARIABLE_GET(boundaryConditions,fieldVariable,boundaryConditionsVariable,err,error,*999)
           IF(ASSOCIATED(boundaryConditionsVariable)) THEN
