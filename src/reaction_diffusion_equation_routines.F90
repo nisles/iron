@@ -915,7 +915,7 @@ CONTAINS
     INTEGER(INTG) FIELD_VAR_TYPE,mh,mhs,ms,ng,nh,nhs,ni,nj,ns,component_idx
     LOGICAL :: USE_FIBRES
     REAL(DP) :: DIFFUSIVITY(3,3),DPHIDX(3,64),PHI(3,64),DZDNU(3,3),PREVDZDNU(3,3),RWG,SUM,STORAGE_COEFFICIENT,C_PARAM
-    REAL(DP) :: timestep, Jznu, prevJznu, dJdt, Jznu_ref, prevJznu_ref
+    REAL(DP) :: timestep, Jznu, prevJznu, dJdt, Jznu_ref, prevJznu_ref, J_stored
     REAL(DP) :: DZDNUT(3,3),DZDNUT_DZDNU(3,3),DZDNU_INV(3,3),DZDNUT_INV(3,3)
     TYPE(BASIS_TYPE), POINTER :: DEPENDENT_BASIS,GEOMETRIC_BASIS,FIBRE_BASIS
     TYPE(FIELD_INTERPOLATED_POINT_TYPE), POINTER :: geometricInterpPoint, prevIndependentInterpPoint,independentInterpPoint
@@ -1041,6 +1041,8 @@ CONTAINS
               & geometricInterpPointMetrics,err,error,*999)
             IF(EQUATIONS_SET%SPECIFICATION(3)==EQUATIONS_SET_CELLML_REAC_MOVING_DOMAIN_SUBTYPE) THEN
               CALL FIELD_INTERPOLATE_GAUSS(NO_PART_DERIV,BASIS_DEFAULT_QUADRATURE_SCHEME,ng,equations%interpolation% &
+                & independentInterpPoint(FIELD_U_VARIABLE_TYPE)%ptr,err,error,*999)
+              CALL FIELD_INTERPOLATE_GAUSS(NO_PART_DERIV,BASIS_DEFAULT_QUADRATURE_SCHEME,ng,equations%interpolation% &
                 & independentInterpPoint(FIELD_V_VARIABLE_TYPE)%ptr,err,error,*999)
               CALL FIELD_INTERPOLATE_GAUSS(FIRST_PART_DERIV,BASIS_DEFAULT_QUADRATURE_SCHEME,ng,equations%interpolation% &
                 & independentInterpPoint(FIELD_U1_VARIABLE_TYPE)%ptr,err,error,*999)
@@ -1088,13 +1090,17 @@ CONTAINS
               Jznu_ref = independentInterpPointMetrics%JACOBIAN/geometricInterpPointMetrics%JACOBIAN
               prevJznu_ref = prevIndependentInterpPointMetrics%JACOBIAN/geometricInterpPointMetrics%JACOBIAN
               Timestep=equations%interpolation%independentInterpPoint(FIELD_V_VARIABLE_TYPE)%ptr%VALUES(nj,1) 
+              !J_stored = equations%interpolation%independentInterpPoint(FIELD_U_VARIABLE_TYPE)%ptr%VALUES(nj,1) 
+              equations%interpolation%independentInterpPoint(FIELD_U_VARIABLE_TYPE)%ptr%VALUES(nj,1) = 1.5_DP
+              !IF(ELEMENT_NUMBER==1) THEN
+              !  write(*,*) J_stored
+              !ENDIF
               !equations%interpolation%independentInterpPoint(FIELD_V_VARIABLE_TYPE)%ptr%VALUES(nj,1) = TIMESTEP
               dJdt= ((Jznu - prevJznu) / (TIMESTEP))
             ELSE
               dJdt = 0
               Jznu = 1
             ENDIF
-            WRITE(*,*) "Jared was here"
             !Calculate RWG.
             RWG=equations%interpolation%geometricInterpPointMetrics(FIELD_U_VARIABLE_TYPE)%ptr%JACOBIAN* &
               & QUADRATURE_SCHEME%GAUSS_WEIGHTS(ng)
